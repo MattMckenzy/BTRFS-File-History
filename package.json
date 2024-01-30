@@ -2,13 +2,23 @@
   "name": "btrfs-file-history",
   "displayName": "BTRFS File History",
   "description": "Browse and compare the BTRFS snapshot history of any file via a simple context menu!",
-  "version": "0.0.1",
+  "publisher": "MattMckenzy",
+  "author": {
+    "name": "MattMckenzy"
+  },
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
   ],
+  "icon": "logo.png",
+  "galleryBanner": {
+    "color": "#C80000",
+    "theme": "dark"
+  },
+  "pricing": "Free",
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
@@ -61,5 +71,15 @@
     "typescript": "^5.3.3",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8"
-  }  
+  },
+  "license": "SEE LICENSE IN LICENSE FILE.",
+  "homepage": "https://github.com/MattMckenzy/BTRFS-File-History",
+  "bugs": {
+    "url": "https://github.com/MattMckenzy/BTRFS-File-History/issues",
+    "email": "mattmckenzy@ctfam.ca"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MattMckenzy/BTRFS-File-History"
+  }
 }
