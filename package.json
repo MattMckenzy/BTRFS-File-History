@@ -1,0 +1,65 @@
+{
+  "name": "btrfs-file-history",
+  "displayName": "BTRFS File History",
+  "description": "Browse and compare the BTRFS snapshot history of any file via a simple context menu!",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "btrfsFileHistory.getHistory",
+        "title": "Get File History"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceScheme == file",
+          "command": "btrfsFileHistory.getHistory",
+          "group": "3_compare"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "BTRFS File History",
+      "properties": {
+        "btrfsFileHistory.snapshotPath": {
+          "type": "string",
+          "order": 0,
+          "description": "Specifies the path of the BTRFS snapshots directory, typically '.snapshots' found at the subvolume root, used to get file histories."
+        },
+        "btrfsFileHistory.relativePath": {
+          "type": "string",
+          "order": 1,
+          "description": "Specifies the relative root of the snapshot path. In other words, the directory of which snapshots are created."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8"
+  }  
+}
