@@ -28,6 +28,6 @@ Considering changing from the quick pick menu to a web view to customize the res
 
 ## Release Notes
 
-### 1.0.0
+### 1.0.2
 
 Initial release of BTRFS File History.
