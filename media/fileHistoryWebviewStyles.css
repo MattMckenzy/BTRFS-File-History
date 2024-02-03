@@ -1,0 +1,166 @@
+html {
+    box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+    box-sizing: inherit;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Demo Styles */
+
+body {
+    margin: 0;
+    padding: 10px 20px;
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+}
+
+h1 {
+    font-weight: bold;
+    margin: 24px;
+}
+
+#icons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+}
+
+#icons .icon {
+    width: 140px;
+    padding: 20px;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+
+#icons .icon .codicon {
+    font-size: 32px;
+    padding-bottom: 16px;
+}
+
+#topMessageDiv {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    transform-origin: left;
+    animation: pop-in 0.3s cubic-bezier(0.6, 0.5, 0.3, 0.8) forwards;
+}
+
+#topMessage {
+    margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+#loader {
+    margin-left: 1rem;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--vscode-foreground);
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s cubic-bezier(0.6, 0.5, 0.3, 0.8) infinite;
+}
+
+.history-item {
+    margin-bottom: 1rem;
+    transform-origin: left;
+    animation: pop-in 0.3s cubic-bezier(0.6, 0.5, 0.3, 0.8) forwards;
+}
+
+.history-item-top {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+}
+
+.buttons {
+    margin-left: 0.25rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.button {
+    margin: 0.25rem;
+}
+
+.history-item-bottom {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.differences {
+    display: inline;
+}
+
+.additions {
+    margin-right: 0.25rem;
+    color: green;
+    animation: pop-out 0.3s cubic-bezier(0.6, 0.5, 0.3, 0.8) forwards;
+}
+
+.deletions {
+    color: red;
+    animation: pop-out 0.3s cubic-bezier(0.6, 0.5, 0.3, 0.8) forwards;
+}
+
+.hide {
+    display: none;
+}
+
+.pop-in {
+    animation: pop-in 0.3s cubic-bezier(0.6, 0.5, 0.3, 0.8) forwards !important;
+}
+
+.pop-out {
+    animation: pop-out 0.3s cubic-bezier(0.6, 0.5, 0.3, 0.8) forwards !important;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pop-in {
+    0% {
+        transform: scale(0.5, 0.5);
+        opacity: 0%;
+    }
+
+    100% {
+        transform: scale(1, 1);
+        opacity: 100%;
+    }
+}
+
+@keyframes pop-out {
+    0% {
+        transform: scale(1, 1);
+        opacity: 100%;
+    }
+
+    100% {
+        transform: scale(0.5, 0.5);
+        opacity: 0%;
+    }
+}

@@ -1,129 +1,187 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
-import * as cp from 'child_process';
-import { pickFile } from './quickOpen';
 import { window, workspace, commands } from 'vscode';
-import { Uri, Disposable, CancellationToken, CancellationTokenSource } from 'vscode';
-import { QuickPick, QuickPickItem, QuickPickItemButtonEvent, QuickInputButton, ThemeIcon } from 'vscode';
+import { ExtensionContext, Uri, CancellationTokenSource } from 'vscode';
+import { WebviewPanel, ViewColumn } from 'vscode';
+import { Worker } from "worker_threads";
+import { pickFile } from './quickOpen';
+import { GetUri, GetNonce, RunWorker, RunWorkerAsync, Sleep } from "./utilities";
+import { GetAdditionsMessage, GetDeletionsessage, GetFileHistoryItemWebviewHtml, GetFileHistoryWebviewHtml, GetMessage } from './fileHistoryWebviewHtml';
+import { HistoryItem } from './HistoryItem';
 
-export async function getHistory(fileUri: Uri | undefined) {
-
+export async function getHistory(fileUri: Uri | undefined, context: ExtensionContext) 
+{
 	let filePath: string = '';
-	if (!fileUri) {
+	if (!fileUri) 
+	{
 		let quickPicks: Uri | undefined = await pickFile();
-		if (!quickPicks) {
+		if (!quickPicks) 
+		{
 			window.showErrorMessage('Please select a file for which to retrieve history!');
 			return;
 		}
-		else {
+		else 
+		{
 			filePath = quickPicks.fsPath;
 		}
 	}
-	else {
+	else 
+	{
 		filePath = fileUri.path;
 	}
 
 	const snapshotsFolder: string | undefined = workspace.getConfiguration('btrfsFileHistory').get('snapshotPath');
 	const relativePath: string | undefined = workspace.getConfiguration('btrfsFileHistory').get('relativePath');
 
-	if (!snapshotsFolder) {
+	if (!snapshotsFolder) 
+	{
 		window.showErrorMessage('Please define the snapshots folder path in the configuration for "BTRFS Get History"');
 		return;
 	}
 
-	if (!relativePath) {
+	if (!relativePath) 
+	{
 		window.showErrorMessage('Please define the relative folder path in the configuration for "BTRFS Get History"');
 		return;
 	}
 
-	const relativeFilePath = path.relative(relativePath, filePath);
-	if (!relativeFilePath) {
+	const relativeFilePath: string = path.relative(relativePath, filePath);
+	if (!relativeFilePath) 
+	{
 		window.showErrorMessage('The file path isn\'t relative to the given relative folder path in the configuration for "BTRFS Get History"!');
 		return;
 	}
 
-	let cancellationTokenSource: CancellationTokenSource = new CancellationTokenSource();
+	let processFileDifferences: boolean = !(workspace.getConfiguration('btrfsFileHistory').get('disableDifferenceProcessing') ?? false);
 
-	const quickPick: QuickPick<HistoryItem> = window.createQuickPick<HistoryItem>();
-	const disposables: Disposable[] = [quickPick];
-
-	disposables.push(
-		quickPick.onDidTriggerItemButton(async (historyItemButtonEvent: QuickPickItemButtonEvent<HistoryItem>) => {
-			quickPick.hide();
-			if (historyItemButtonEvent.button.tooltip && historyItemButtonEvent.button.tooltip === 'Open') {
-				let openPath: Uri = Uri.file(historyItemButtonEvent.item.description);
-				workspace.openTextDocument(openPath).then(doc => {
-					window.showTextDocument(doc);
-				});
-			}
-			else if (historyItemButtonEvent.button.tooltip && historyItemButtonEvent.button.tooltip === 'Compare') {
-				commands.executeCommand('vscode.diff', Uri.file(filePath), Uri.file(historyItemButtonEvent.item.description), `Comparing ${path.basename(filePath)} with history from: ${historyItemButtonEvent.item.label}`);
-			}
-		}),
-		quickPick.onDidHide(async () => {
-			cancellationTokenSource.cancel();
-			disposables.forEach(d => d.dispose());
-		})
+	const fileHistories: HistoryItem[] = [];
+	const fileName: string = path.basename(filePath);
+	const fileHistoryPanel: WebviewPanel = window.createWebviewPanel(
+		'btrfsFileHistory',
+		`History: ${fileName}`,
+		ViewColumn.One,
+		{
+			enableScripts: true,
+			retainContextWhenHidden: true,
+			localResourceRoots:
+				[
+					Uri.joinPath(context.extensionUri, 'out'),
+					Uri.joinPath(context.extensionUri, 'media')
+				]
+		}
 	);
 
-	quickPick.ignoreFocusOut = true;
-	quickPick.canSelectMany = false;
-	quickPick.title = `Currently loading file histories for "${path.basename(filePath)}"...`;
-	quickPick.placeholder = 'Type here to filter by date.';
+	const nonce: string = GetNonce();
+	const scriptUri: Uri = GetUri(fileHistoryPanel.webview, context.extensionUri, ["out", "fileHistoryWebviewScripts.js"]);
+	const styleUri: Uri = GetUri(fileHistoryPanel.webview, context.extensionUri, ['media', 'fileHistoryWebviewStyles.css']);
+	const codiconsUri: Uri = GetUri(fileHistoryPanel.webview, context.extensionUri, ['media', "codicon", 'codicon.css']);
+	fileHistoryPanel.webview.html = GetFileHistoryWebviewHtml(fileName, scriptUri, styleUri, codiconsUri, fileHistoryPanel.webview.cspSource, nonce);
 
-	quickPick.show();
+	// Handle messages from the webview
+	fileHistoryPanel.webview.onDidReceiveMessage(
+		message => 
+		{
+			if (typeof message !== undefined &&
+				typeof message.command !== undefined &&
+				typeof message.index !== undefined &&
+				typeof fileHistories.at(message.index) !== undefined) 
+				{
+				const fileHistory: HistoryItem = fileHistories.at(message.index)!;
+				switch (message.command) 
+				{
+					case 'open':
+						const openPath: Uri = Uri.file(fileHistory.path);
+						workspace.openTextDocument(openPath).then(doc => 
+						{
+							window.showTextDocument(doc);
+						});
+						return;
 
-	await GetHistoryItems(filePath, relativeFilePath, snapshotsFolder!, cancellationTokenSource.token, async (historyItem: HistoryItem) => {
-		quickPick.items = quickPick.items.concat([historyItem]);
-		quickPick.show();
+					case 'compare':
+						commands.executeCommand('vscode.diff', Uri.file(fileHistory.path), Uri.file(filePath), `Comparing ${fileName} with history from: ${fileHistory.date}`);
+
+						return;
+				}
+			}
+		},
+		undefined,
+		context.subscriptions
+	);
+
+	const cancellationTokenSource: CancellationTokenSource = new CancellationTokenSource();
+
+	fileHistoryPanel.onDidDispose(() => 
+	{
+		cancellationTokenSource.cancel();
 	});
+
+	let historyItemDifferencesProcessed: number = 0;
+	let historyItemDifferencesWorker: Worker | undefined;
+	if (processFileDifferences)
+	{
+		historyItemDifferencesWorker = await RunWorkerAsync(path.join(__dirname, "getHistoryItemDifferencesWorker.js"), undefined, async (message: any) => 
+		{
+			if (fileHistories[message.index]) 
+			{
+				fileHistories[message.index].additions = message.additions;
+				fileHistories[message.index].deletions = message.deletions;
 	
-	quickPick.title = `Select date of "${path.basename(filePath)}" history file to open or compare with current.`;
-}
-
-class HistoryItem implements QuickPickItem {
-	label: string;
-	description: string;
-	buttons: QuickInputButton[] = [{ iconPath: new ThemeIcon('new-file'), tooltip: 'Open' }, { iconPath: new ThemeIcon('diff'), tooltip: 'Compare' }];
-
-	constructor(public labelString: string, public descriptionString: string) {
-		this.label = labelString;
-		this.description = descriptionString;
+				await fileHistoryPanel.webview.postMessage({ command: 'add-differences', index: message.index, additionsText: GetAdditionsMessage( message.additions), deletionsText: GetDeletionsessage(message.deletions) });
+			}
+			else if (typeof message.error === 'string' && message.error) 
+			{
+				window.showErrorMessage(`Couldn't get snapshot differences of "${fileName}" : ${message.error}`);
+			}
+			
+			historyItemDifferencesProcessed++;
+		}, cancellationTokenSource.token);
 	}
-}
 
-async function GetHistoryItems(filePath: string, relativeFilePath: string, snapshotsFolder: string, cancellationToken: CancellationToken, callback: (historyItem: HistoryItem) => Promise<void>) {
-	const fileHistories: HistoryItem[] = [];
-	const snapshotDirents: fs.Dirent[] = fs.readdirSync(snapshotsFolder, { withFileTypes: true }).filter(item => item.isDirectory()).sort().reverse();
-
-	for (const snapshotDirent of snapshotDirents) {
-		if (cancellationToken.isCancellationRequested) {
-			return;
-		}
-
-		const fileHistoryPath = path.join(snapshotsFolder as string, snapshotDirent.name, relativeFilePath);
-		if (fs.existsSync(fileHistoryPath)) {
-			let latestFileHistoryToCompare = filePath;
-			if (fileHistories.length > 0) {
-				latestFileHistoryToCompare = fileHistories[fileHistories.length - 1].description;
-			}
-
-			try 
-			{	const quote = process.platform === 'win32' ? '"' : '\'';
-				cp.execSync(`diff -q ${quote}${latestFileHistoryToCompare}${quote} ${quote}${fileHistoryPath}${quote}`);
-			}
-			catch (error: any) {
-				if (error.status === 1) {
-					const newHistoryItem = new HistoryItem(fs.statSync(fileHistoryPath).mtime.toLocaleString(), fileHistoryPath);
-					fileHistories.push(newHistoryItem);
-					await callback(newHistoryItem);
-				}
-				else {
-					window.showErrorMessage(`There was an error while comparing file histories: ${error.message}`);
-					return;
+	try 
+	{
+		await RunWorker(path.join(__dirname, "getDifferingSnapshotsWorker.js"), { filePath, relativeFilePath, snapshotsFolder }, async (message: any) => 
+		{
+			if (message.historyItem) 
+			{
+				const historyItem: HistoryItem = message.historyItem;
+				historyItem.index = fileHistories.length;
+				historyItem.html = GetFileHistoryItemWebviewHtml(historyItem);
+				fileHistories.push(historyItem);
+				await fileHistoryPanel.webview.postMessage({ command: 'add-snapshot', historyItem: historyItem });
+				
+				if (historyItemDifferencesWorker)
+				{
+					historyItemDifferencesWorker.postMessage({ command: 'get-differences', index: historyItem.index, filePath1: historyItem.path, filePath2: filePath });
 				}
 			}
+			else if (typeof message.error === 'string' && message.error) 
+			{
+				window.showErrorMessage(`Couldn't get snapshot history of "${fileName}" : ${message.Error}`);
+			}
+		}, cancellationTokenSource.token);
+	}
+	catch (error: any) 
+	{
+		window.showErrorMessage(`Couldn't get snapshot history of "${fileName}" : ${error.message}`);
+	}
+
+	if (fileHistories.length > 0)
+	{
+		await fileHistoryPanel.webview.postMessage({ command: 'update-message', text: GetMessage(fileHistories.length, true) });
+
+		if (historyItemDifferencesWorker)
+		{
+			while(historyItemDifferencesProcessed !== fileHistories.length)
+			{
+				await Sleep(300);
+			}
 		}
 	}
+
+
+	if (historyItemDifferencesWorker)
+	{
+		historyItemDifferencesWorker.postMessage({ command: 'end-processing' });
+	}
+	await fileHistoryPanel.webview.postMessage({ command: 'update-message', text: GetMessage(fileHistories.length) });
+	await fileHistoryPanel.webview.postMessage({ command: 'remove-loader' });
 }

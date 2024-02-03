@@ -1,12 +1,12 @@
 {
   "name": "btrfs-file-history",
   "displayName": "BTRFS File History",
-  "description": "Browse and compare the BTRFS snapshot history of any file via a simple context menu!",
+  "description": "Browse and compare the BTRFS snapshot history of any file via a simple context menu item!",
   "publisher": "ctfam",
   "author": {
     "name": "MattMckenzy"
   },
-  "version": "1.0.2",
+  "version": "1.1.2",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -49,28 +49,37 @@
           "type": "string",
           "order": 1,
           "description": "Specifies the relative root of the snapshot path. In other words, the directory of which snapshots are created."
+        },
+        "btrfsFileHistory.disableDifferenceProcessing": {
+          "type": "boolean",
+          "order": 2,
+          "description": "Disables further snapshot processing to calculate file differences used to show additions and deletions."
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run package",
+    "compile": "node ./esbuild.js",
+    "package": "NODE_ENV=production node ./esbuild.js",
+    "watch": "node ./esbuild.js --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
+    "@types/command-exists": "^1.2.3",
     "@types/mocha": "^10.0.6",
+    "@types/n-readlines": "^1.0.6",
     "@types/node": "18.x",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
     "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.8"
+    "@vscode/test-electron": "^2.3.8",
+    "esbuild": "^0.16.17",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
   },
   "license": "SEE LICENSE IN LICENSE",
   "homepage": "https://github.com/MattMckenzy/BTRFS-File-History",
@@ -84,5 +93,11 @@
   },
   "sponsor": {
     "url": "https://github.com/sponsors/MattMckenzy"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.35",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "fast-array-diff": "^1.1.0",
+    "n-readlines": "^1.0.1"
   }
 }
