@@ -27,9 +27,18 @@ fi
 
 mkdir -p packages
 vsce package --out packages/
-#vsce publish
 
 git add .
 git commit -m "$COMMIT_MESSAGE"
+git push
 git tag v$CHOSEN_VERS HEAD
 git push --tags
+
+set -o noglob
+set +o histexpand
+gh release create -t "Release v$CHOSEN_VERS" -n "$MESSAGE" v$CHOSEN_VERS ./packages/btrfs-file-history-$CHOSEN_VERS.vsix
+set +o noglob
+set -o histexpand
+
+vsce publish
+npx ovsx publish ./packages/btrfs-file-history-$CHOSEN_VERS.vsix -p $(cat ~/.tokens/ovsx)
