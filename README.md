@@ -26,7 +26,7 @@ Nothing planned.
 
 ## Release Notes
 
-## 1.1.2
+## 1.1.3
 
 - Changed the snapshot history results from a quick pick menu to a fully-featured webview.
 

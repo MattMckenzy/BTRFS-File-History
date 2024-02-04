@@ -89,11 +89,7 @@ export async function getHistory(fileUri: Uri | undefined, context: ExtensionCon
 				switch (message.command) 
 				{
 					case 'open':
-						const openPath: Uri = Uri.file(fileHistory.path);
-						workspace.openTextDocument(openPath).then(doc => 
-						{
-							window.showTextDocument(doc);
-						});
+						commands.executeCommand('vscode.open', Uri.file(fileHistory.path));
 						return;
 
 					case 'compare':
